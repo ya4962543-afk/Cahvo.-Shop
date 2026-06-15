@@ -1,0 +1,63 @@
+using UnityEngine;
+
+public class CameraFollow : MonoBehaviour
+{
+    public Transform target;
+    public Vector3 offset = new Vector3(0, 3, -6);
+    public float smooth = 5f;
+
+    void LateUpdate()
+    {
+        Vector3 desiredPos = target.position + target.TransformDirection(offset);
+        transform.position = Vector3.Lerp(transform.position, desiredPos, smooth * Time.deltaTime);
+
+        transform.LookAt(target);
+    }
+}using UnityEngine;
+
+public class CarController : MonoBehaviour
+{
+    [Header("Motor")]
+    public float motorPower = 1500f;
+    public float brakePower = 3000f;
+    public float maxSpeed = 50f;
+
+    [Header("Steering")]
+    public float steerStrength = 80f;
+
+    [Header("Drift")]
+    public float driftFactor = 0.95f;
+
+    private Rigidbody rb;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        rb.centerOfMass = new Vector3(0, -0.5f, 0);
+    }
+
+    void FixedUpdate()
+    {
+        float v = Input.GetAxis("Vertical");   // W-S
+        float h = Input.GetAxis("Horizontal"); // A-D
+
+        Vector3 forwardForce = transform.forward * v * motorPower * Time.fixedDeltaTime;
+
+        if (rb.linearVelocity.magnitude < maxSpeed)
+            rb.AddForce(forwardForce);
+
+        // Steering
+        transform.Rotate(0, h * steerStrength * Time.fixedDeltaTime, 0);
+
+        // Drift hissi
+        Vector3 localVel = transform.InverseTransformDirection(rb.linearVelocity);
+        localVel.x *= driftFactor;
+        rb.linearVelocity = transform.TransformDirection(localVel);
+
+        // Fren
+        if (Input.GetKey(KeyCode.Space))
+        {
+            rb.AddForce(-rb.linearVelocity * brakePower * Time.fixedDeltaTime);
+        }
+    }
+}
